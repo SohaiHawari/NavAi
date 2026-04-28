@@ -1,0 +1,214 @@
+% ============================================================
+% NavAI - Mathematical Model
+% Copy-paste this directly into your LaTeX report
+% ============================================================
+
+% Paste this inside your existing Mathematical Model section/chapter
+% Remove or adjust headings as needed to match your report structure
+
+The NavAI system is formally modeled as a composite function pipeline that transforms a visual input and spoken query into a spoken natural language response.
+
+\subsection{System Formulation}
+
+Let $I \in \mathbb{R}^{H \times W \times 3}$ be the input RGB image and $Q$ be the user's natural language query. The system output $A$ (answer) is defined as:
+
+\begin{equation}
+\mathcal{F}_{\text{NavAI}}: (I, Q) \longrightarrow A
+\end{equation}
+
+The pipeline decomposes into five sequential/parallel stages:
+
+\begin{equation}
+\mathcal{F}_{\text{NavAI}} = \mathcal{G} \circ \mathcal{C} \circ (\mathcal{D} \parallel \mathcal{T}) \circ \mathcal{I}
+\end{equation}
+
+where $\mathcal{I}$ is the Intent Recognizer, $\mathcal{D}$ is the Object Detector, $\mathcal{T}$ is the OCR Engine, $\mathcal{C}$ is the Context Builder, $\mathcal{G}$ is the LLM Answer Generator, and $\parallel$ denotes parallel execution.
+
+% ────────────────────────────────────────────────
+\subsection{Object Detection (YOLOv8)}
+
+Given input image $I$, the YOLOv8 detector produces a set of $N$ detections:
+
+\begin{equation}
+\mathcal{D}(I) = \{d_1, d_2, \ldots, d_N\}, \quad d_i = (c_i,\; p_i,\; \mathbf{b}_i,\; s_i)
+\end{equation}
+
+where $c_i \in \{1, \ldots, 80\}$ is the class label, $p_i \in [0,1]$ is the confidence score (filtered by $\tau = 0.4$), $\mathbf{b}_i = (x_1, y_1, x_2, y_2)$ is the bounding box, and $s_i$ is the spatial zone.
+
+The spatial zone is computed from the bounding box center:
+
+\begin{equation}
+x_{\text{center}} = \frac{x_1 + x_2}{2}, \qquad
+s_i = 
+\begin{cases}
+    \text{left},   & x_{\text{center}} < \dfrac{W}{3} \\[6pt]
+    \text{center}, & \dfrac{W}{3} \leq x_{\text{center}} \leq \dfrac{2W}{3} \\[6pt]
+    \text{right},  & x_{\text{center}} > \dfrac{2W}{3}
+\end{cases}
+\end{equation}
+
+The YOLOv8 training loss is a multi-task objective:
+
+\begin{equation}
+\mathcal{L}_{\text{YOLO}} = \lambda_{\text{box}} \cdot \mathcal{L}_{\text{CIoU}} + \lambda_{\text{cls}} \cdot \mathcal{L}_{\text{BCE}} + \lambda_{\text{dfl}} \cdot \mathcal{L}_{\text{DFL}}
+\end{equation}
+
+The Complete IoU (CIoU) loss is defined as:
+
+\begin{equation}
+\mathcal{L}_{\text{CIoU}} = 1 - \text{IoU} + \frac{\rho^2(\mathbf{b}, \mathbf{b}^{gt})}{c^2} + \alpha v
+\end{equation}
+
+where $\rho(\cdot)$ is the Euclidean distance between box centers, $c$ is the diagonal of the smallest enclosing box, and:
+
+\begin{equation}
+v = \frac{4}{\pi^2} \left( \arctan \frac{w^{gt}}{h^{gt}} - \arctan \frac{w}{h} \right)^2, \qquad
+\alpha = \frac{v}{(1 - \text{IoU}) + v}
+\end{equation}
+
+% ────────────────────────────────────────────────
+\subsection{Text Extraction (EasyOCR)}
+
+The OCR module uses a CRNN (Convolutional Recurrent Neural Network) architecture to extract text:
+
+\begin{equation}
+\mathcal{T}(I) = \{t_1, t_2, \ldots, t_M\}, \qquad t_j = (\text{text}_j,\; \text{conf}_j,\; \mathbf{r}_j)
+\end{equation}
+
+Text recognition follows CTC (Connectionist Temporal Classification) decoding:
+
+\begin{equation}
+\hat{y} = \arg\max_{y} \sum_{\pi \in \mathcal{B}^{-1}(y)} \prod_{t=1}^{T} P(\pi_t \mid \mathbf{x})
+\end{equation}
+
+where $\mathbf{x}$ is the CNN-RNN encoded feature sequence, $\pi$ is a CTC path, and $\mathcal{B}^{-1}(y)$ maps label $y$ to all valid alignment paths.
+
+% ────────────────────────────────────────────────
+\subsection{Intent Recognition}
+
+The intent classifier maps query $Q$ to a category $k$ using keyword scoring:
+
+\begin{equation}
+\mathcal{I}(Q) = \arg\max_{k \in \mathcal{K}} \sum_{w \in \mathcal{W}_k} \mathbb{1}[w \in \text{tokens}(Q)]
+\end{equation}
+
+where $\mathcal{K} = \{\text{scene}, \text{object}, \text{text}, \text{obstacle}, \text{general}\}$, $\mathcal{W}_k$ is the keyword set for intent $k$, and $\mathbb{1}[\cdot]$ is the indicator function.
+
+The intent determines active modules:
+
+\begin{equation}
+\text{Active}(\mathcal{I}(Q)) = 
+\begin{cases}
+    \{\mathcal{D}, \mathcal{T}\}, & \text{intent} = \text{scene\_description} \\
+    \{\mathcal{D}\},              & \text{intent} = \text{object\_query} \\
+    \{\mathcal{T}\},              & \text{intent} = \text{text\_reading} \\
+    \{\mathcal{D}\},              & \text{intent} = \text{obstacle\_detection} \\
+    \{\mathcal{D}, \mathcal{T}\}, & \text{intent} = \text{general}
+\end{cases}
+\end{equation}
+
+% ────────────────────────────────────────────────
+\subsection{Obstacle Detection and Proximity Estimation}
+
+An object $d_i$ is classified as an obstacle if:
+
+\begin{equation}
+d_i \in \Omega \iff (c_i \in \mathcal{O}_{\text{classes}}) \;\wedge\; (s_i = \text{center}) \;\wedge\; (A_i > \theta_{\text{area}})
+\end{equation}
+
+where $\mathcal{O}_{\text{classes}}$ is the set of obstacle-relevant classes and $A_i$ is the normalized bounding box area:
+
+\begin{equation}
+A_i = \frac{(x_2 - x_1)(y_2 - y_1)}{H \times W}
+\end{equation}
+
+Proximity is estimated as:
+
+\begin{equation}
+\text{proximity}(d_i) = 
+\begin{cases}
+    \text{very close}, & A_i > 0.15 \\
+    \text{close},      & 0.05 < A_i \leq 0.15 \\
+    \text{nearby},     & A_i \leq 0.05
+\end{cases}
+\end{equation}
+
+% ────────────────────────────────────────────────
+\subsection{LLM-based Answer Generation}
+
+The answer generation uses LLaMA 3.1-70B via Groq API. The response is generated autoregressively:
+
+\begin{equation}
+P(A \mid Q, \mathcal{C}) = \prod_{t=1}^{L} P_\theta(a_t \mid a_{<t}, Q, \mathcal{C})
+\end{equation}
+
+where $A = (a_1, a_2, \ldots, a_L)$ is the output sequence of length $L$, and $\theta$ represents model parameters.
+
+The core transformer self-attention mechanism is:
+
+\begin{equation}
+\text{Attention}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}}\right) \mathbf{V}
+\end{equation}
+
+Extended to multi-head attention:
+
+\begin{equation}
+\text{MultiHead}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{Concat}(\text{head}_1, \ldots, \text{head}_h)\, \mathbf{W}^O
+\end{equation}
+
+\begin{equation}
+\text{where} \quad \text{head}_i = \text{Attention}(\mathbf{Q}\mathbf{W}_i^Q,\; \mathbf{K}\mathbf{W}_i^K,\; \mathbf{V}\mathbf{W}_i^V)
+\end{equation}
+
+% ────────────────────────────────────────────────
+\subsection{End-to-End Latency Model}
+
+The total pipeline latency is:
+
+\begin{equation}
+\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{capture}} + \mathcal{L}_{\text{upload}} + \max(\mathcal{L}_{\text{detect}},\; \mathcal{L}_{\text{OCR}}) + \mathcal{L}_{\text{LLM}} + \mathcal{L}_{\text{TTS}}
+\end{equation}
+
+\begin{table}[h]
+\centering
+\caption{Component-wise Latency Breakdown}
+\begin{tabular}{|l|c|}
+\hline
+\textbf{Component} & \textbf{Latency} \\
+\hline
+Image Capture ($\mathcal{L}_{\text{capture}}$)    & $\sim$100 ms \\
+Network Transfer ($\mathcal{L}_{\text{upload}}$)  & 200--500 ms \\
+YOLOv8 Inference ($\mathcal{L}_{\text{detect}}$)  & 300--800 ms \\
+EasyOCR ($\mathcal{L}_{\text{OCR}}$)              & 500--1500 ms \\
+LLM Generation ($\mathcal{L}_{\text{LLM}}$)       & 500--2000 ms \\
+Text-to-Speech ($\mathcal{L}_{\text{TTS}}$)       & 100--300 ms \\
+\hline
+\textbf{Total}                                     & \textbf{1.5--5.0 s} \\
+\hline
+\end{tabular}
+\end{table}
+
+% ────────────────────────────────────────────────
+\subsection{Evaluation Metrics}
+
+\textbf{Object Detection:} Mean Average Precision at IoU = 0.5:
+
+\begin{equation}
+\text{mAP@0.5} = \frac{1}{K} \sum_{k=1}^{K} \int_0^1 P_k(r)\, dr
+\end{equation}
+
+\textbf{OCR Accuracy:} Character Error Rate:
+
+\begin{equation}
+\text{CER} = \frac{S + D + I}{N_{\text{ref}}}
+\end{equation}
+
+where $S$, $D$, $I$ are substitutions, deletions, and insertions respectively.
+
+\textbf{Overall System Quality:}
+
+\begin{equation}
+Q_{\text{system}} = w_1 \cdot \text{mAP} + w_2 \cdot (1 - \text{CER}) + w_3 \cdot R_{\text{LLM}} + w_4 \cdot \frac{1}{\mathcal{L}_{\text{total}}}
+\end{equation}
+
+where $\sum_{i=1}^{4} w_i = 1$ and $R_{\text{LLM}}$ is the LLM response relevance score.

@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "NavAI",
+    "slug": "navai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0A0E27"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "NavAI needs camera access to detect objects and read text in your environment.",
+        "NSMicrophoneUsageDescription": "NavAI needs microphone access to listen to your voice commands.",
+        "NSSpeechRecognitionUsageDescription": "NavAI uses speech recognition to understand your questions."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0A0E27"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.INTERNET"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "NavAI needs camera to help you see your surroundings."
+        }
+      ],
+      "expo-asset"
+    ]
+  }
+}
