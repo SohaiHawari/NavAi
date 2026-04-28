@@ -3,22 +3,15 @@ NavAI Backend - FastAPI Application
 Main entry point for the AI-powered navigation assistant API.
 """
 
+import json
+import ssl
 import time
 import logging
-import ssl
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from contextlib import asynccontextmanager
-
-# Bypass SSL certificate verification for model downloads
-try:
-    _create_unverified_https_context = ssl._create_unverified_context
-except AttributeError:
-    pass
-else:
-    ssl._create_default_https_context = _create_unverified_https_context
-
 
 from config import settings
 from models.detector import ObjectDetector
@@ -56,7 +49,21 @@ async def lifespan(app: FastAPI):
     """Initialize and cleanup application resources."""
     global detector, ocr_engine, qna_engine, context_builder, intent_recognizer, history
 
-    logger.info("🚀 Initializing NavAI modules...")
+    logger.info("�� Initializing NavAI modules...")
+
+    # Validate configuration early
+    try:
+        settings.validate()
+        logger.info("✅ Configuration validated")
+    except ValueError as e:
+        logger.warning(f"⚠️ Config validation: {e} — LLM will use fallback mode")
+
+    # Temporarily bypass SSL for YOLO model auto-download
+    _original_ssl_ctx = ssl._create_default_https_context
+    try:
+        ssl._create_default_https_context = ssl._create_unverified_context
+    except AttributeError:
+        pass
 
     # Initialize all modules
     detector = ObjectDetector(
@@ -64,6 +71,9 @@ async def lifespan(app: FastAPI):
         confidence=settings.YOLO_CONFIDENCE
     )
     logger.info("✅ Object Detector initialized")
+
+    # Restore SSL verification
+    ssl._create_default_https_context = _original_ssl_ctx
 
     ocr_engine = OCREngine(languages=settings.OCR_LANGUAGES)
     logger.info("✅ OCR Engine initialized")
@@ -91,7 +101,7 @@ async def lifespan(app: FastAPI):
     yield
 
     # Cleanup
-    logger.info("🛑 Shutting down NavAI...")
+    logger.info("�� Shutting down NavAI...")
 
 
 # Create FastAPI app
@@ -244,7 +254,7 @@ async def process_query(
     try:
         # Step 1: Recognize intent
         intent = intent_recognizer.recognize(question)
-        logger.info(f"📋 Intent: {intent['intent']} | Question: {question}")
+        logger.info(f"�� Intent: {intent['intent']} | Question: {question}")
 
         # Step 2: Load image
         img = await load_image_from_upload(image)
@@ -253,13 +263,13 @@ async def process_query(
         detections = []
         ocr_results = []
 
-        if intent["intent"] in ["scene_description", "object_query", "obstacle_detection", "general"]:
+        if intent["intent"] in ["scene_description", "object_query", "obstacle_detection", "navigation", "general"]:
             detections = detector.detect(img)
-            logger.info(f"🔍 Detected {len(detections)} objects")
+            logger.info(f"�� Detected {len(detections)} objects")
 
-        if intent["intent"] in ["text_reading", "scene_description", "general"]:
+        if intent["intent"] in ["text_reading", "scene_description", "navigation", "general"]:
             ocr_results = ocr_engine.extract_text(img)
-            logger.info(f"📝 Extracted {len(ocr_results)} text regions")
+            logger.info(f"�� Extracted {len(ocr_results)} text regions")
 
         # Step 4: Build context
         context = context_builder.build(
@@ -267,10 +277,10 @@ async def process_query(
             ocr_results=ocr_results,
             intent=intent,
         )
-        logger.info(f"📦 Context: {context['summary']}")
+        logger.info(f"�� Context: {context['summary']}")
 
         # Step 5: Generate answer
-        answer = await qna_engine.generate_answer(question, str(context))
+        answer = await qna_engine.generate_answer(question, json.dumps(context, default=str))
 
         # Step 6: Calculate metrics
         latency = round((time.time() - start) * 1000, 2)
