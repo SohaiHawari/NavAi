@@ -7,8 +7,8 @@
 │                        MOBILE APP (React Native)                │
 │                                                                 │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐  │
-│  │ Wake Word│→ │   STT    │→ │  Camera  │→ │   API Call   │  │
-│  │ Detector │  │ (Voice)  │  │ Capture  │  │  to Backend  │  │
+│  │  Mic Tap │→ │   STT    │→ │  Camera  │→ │   API Call   │  │
+│  │  Button  │  │ (Voice)  │  │ Capture  │  │  to Backend  │  │
 │  └──────────┘  └──────────┘  └──────────┘  └──────┬───────┘  │
 │                                                     │          │
 │  ┌──────────┐  ┌──────────────────────────────────┐ │          │
@@ -30,7 +30,7 @@
 │  ┌──────────────┐                                              │
 │  │   Intent     │  Classifies question into:                   │
 │  │ Recognizer   │  scene_description / object_query /          │
-│  │              │  text_reading / obstacle_detection            │
+│  │              │  text_reading / obstacle / navigation / general│
 │  └──────┬───────┘                                              │
 │         │                                                       │
 │    ┌────┴────┐                                                  │
@@ -70,10 +70,10 @@
 ## Detailed Pipeline Flow
 
 ```
-Step 1: WAKE WORD DETECTION
-   User says "Hey NavAI"
-   → Porcupine detects wake word (offline)
-   → Activates listening mode
+Step 1: VOICE ACTIVATION
+   User taps the microphone button
+   → Native STT activates (or demo mode in Expo Go)
+   → Listening mode begins
    
 Step 2: SPEECH-TO-TEXT (STT)
    User speaks question: "What is in front of me?"

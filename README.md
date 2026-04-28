@@ -1,4 +1,4 @@
-# 🧭 NavAI: Hybrid AI-Powered Navigation & Voice Q&A Assistant
+# �� NavAI: Hybrid AI-Powered Navigation & Voice Q&A Assistant
 
 > **For the Visually Impaired** — Real-time object detection, text reading, and intelligent voice responses.
 
@@ -10,7 +10,7 @@
 
 ---
 
-## 📋 Table of Contents
+## �� Table of Contents
 - [Overview](#overview)
 - [Features](#features)
 - [Architecture](#architecture)
@@ -23,7 +23,7 @@
 
 ---
 
-## 🎯 Overview
+## �� Overview
 
 NavAI is a mobile application that helps visually impaired users understand their surroundings through voice interaction. Users can ask questions like *"What is in front of me?"* or *"Read this sign"*, and the system responds with an intelligent spoken answer.
 
@@ -35,19 +35,19 @@ NavAI is a mobile application that helps visually impaired users understand thei
 
 | Feature | Description |
 |---------|-------------|
-| 🎤 Voice Commands | Speak questions naturally |
-| 📷 Real-time Vision | YOLOv8 object detection |
-| 📝 Text Reading | EasyOCR for signs & labels |
-| 🧠 AI Answers | LLM-powered natural responses |
-| 🔊 Spoken Output | Text-to-Speech feedback |
+| �� Voice Commands | Speak questions naturally |
+| �� Real-time Vision | YOLOv8 object detection |
+| �� Text Reading | EasyOCR for signs & labels |
+| �� AI Answers | LLM-powered natural responses |
+| �� Spoken Output | Text-to-Speech feedback |
 | ⚠️ Obstacle Alerts | Warns about nearby obstacles |
-| 🌐 Multi-language | English + Hindi support |
-| 💾 Context Memory | Remembers previous interactions |
-| 🔌 Offline Fallback | Works without internet (limited) |
+| �� Multi-language | English + Hindi support |
+| �� Context Memory | Remembers previous interactions |
+| �� Offline Fallback | Works without internet (limited) |
 
 ---
 
-## 🏗️ Architecture
+## ��️ Architecture
 
 ```
 User Voice → STT → Intent Recognition → Camera Capture
@@ -59,7 +59,7 @@ User Voice → STT → Intent Recognition → Camera Capture
 
 ---
 
-## 🛠️ Tech Stack
+## ��️ Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
@@ -73,12 +73,12 @@ User Voice → STT → Intent Recognition → Camera Capture
 
 ---
 
-## 📂 Project Structure
+## �� Project Structure
 
 ```
 NavAI/
 ├── backend/
-│   ├── main.py               # FastAPI application (7 endpoints)
+│   ├── main.py               # FastAPI application (8 endpoint handlers)
 │   ├── config.py              # Configuration & env loading
 │   ├── requirements.txt       # Python dependencies
 │   ├── test_pipeline.py       # Comprehensive test suite (8 suites)
@@ -125,7 +125,7 @@ NavAI/
 
 ---
 
-## 🚀 Quick Start
+## �� Quick Start
 
 ### Backend
 ```bash
@@ -147,7 +147,7 @@ See [SETUP_GUIDE.md](SETUP_GUIDE.md) for detailed instructions.
 
 ---
 
-## 📡 API Reference
+## �� API Reference
 
 | Endpoint | Method | Input | Output |
 |----------|--------|-------|--------|
@@ -163,7 +163,7 @@ See [SETUP_GUIDE.md](SETUP_GUIDE.md) for detailed instructions.
 
 ---
 
-## 📊 Performance
+## �� Performance
 
 | Metric | Value |
 |--------|-------|
@@ -175,12 +175,12 @@ See [SETUP_GUIDE.md](SETUP_GUIDE.md) for detailed instructions.
 
 ---
 
-## 👥 Team
+## �� Team
 
 **Final Year B.E. Project — 2025-26**
 
 ---
 
-## 📄 License
+## �� License
 
 This project is for academic purposes. MIT License.

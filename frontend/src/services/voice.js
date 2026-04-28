@@ -5,9 +5,13 @@
  * (e.g., in Expo Go or web).
  */
 
-// Forced demo mode for Expo Go compatibility
-// (Native STT requires npx expo run:android, not supported in regular Expo Go)
 let Voice = null;
+try {
+  Voice = require("@react-native-voice/voice").default;
+} catch (e) {
+  // Native module unavailable (Expo Go / web) — demo mode will be used
+  console.log("Native Voice module unavailable, using demo mode");
+}
 
 // Demo questions used when native STT is unavailable
 const DEMO_QUESTIONS = [

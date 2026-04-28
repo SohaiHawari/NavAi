@@ -14,7 +14,7 @@
 ## Step 1: Clone / Navigate to Project
 
 ```bash
-cd "C:\Users\DELL\Desktop\BE Project\NavAI"
+cd NavAi-main
 ```
 
 ---
@@ -92,13 +92,11 @@ npm install
 
 ### 3.2 Configure Backend URL
 
-Edit `src/config/api.js`:
-```javascript
-// For Android emulator:
-const API_BASE_URL = "http://10.0.2.2:8000";
-
-// For physical device (use your PC's local IP):
-const API_BASE_URL = "http://192.168.1.XXX:8000";
+Edit the `extra.API_URL` field in `app.json`:
+```json
+"extra": {
+  "API_URL": "http://YOUR_PC_IP:8000"
+}
 ```
 
 **Find your PC's IP:**
@@ -109,6 +107,8 @@ ipconfig
 # macOS/Linux
 ifconfig
 ```
+
+Use `10.0.2.2:8000` for Android emulator, or `localhost:8000` for iOS simulator.
 
 ### 3.3 Start the App
 ```bash

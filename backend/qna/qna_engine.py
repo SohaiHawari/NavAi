@@ -142,7 +142,11 @@ class QnAEngine:
             return answer
 
         except Exception as e:
-            logger.error(f"LLM generation failed: {e}")
+            error_msg = str(e).lower()
+            if "model" in error_msg and ("not found" in error_msg or "deactivated" in error_msg):
+                logger.error(f"LLM model unavailable ({self.model}): {e}")
+            else:
+                logger.error(f"LLM generation failed: {e}")
             return self._fallback_answer(question, context)
 
     def _fallback_answer(self, question: str, context: str) -> str:
