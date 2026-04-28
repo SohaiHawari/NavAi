@@ -1,77 +1,27 @@
 /**
- * NavAI - API Service
- * Handles all communication with the FastAPI backend.
+ * NavAI - API Configuration
+ * Backend server connection settings.
+ *
+ * To configure: Set your backend IP before starting the app.
+ * - Real device: Use your computer's LAN IP (e.g., 192.168.1.x)
+ * - Android emulator: Use '10.0.2.2'
+ * - iOS simulator: Use 'localhost'
  */
-import API_CONFIG from "../config/api";
 
-class NavAIService {
-  constructor() {
-    this.baseUrl = API_CONFIG.BASE_URL;
-    this.timeout = API_CONFIG.TIMEOUT;
-  }
+// Change this IP to your backend server's LAN IP
+const API_BASE_URL = "http://10.196.233.82:8000";
 
-  async checkHealth() {
-    try {
-      const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), 5000);
-      const res = await fetch(`${this.baseUrl}/`, { signal: controller.signal });
-      clearTimeout(id);
-      const data = await res.json();
-      return data.status === "online";
-    } catch (e) {
-      console.error("Health check failed:", e.message);
-      return false;
-    }
-  }
+export const API_CONFIG = {
+  BASE_URL: API_BASE_URL,
+  ENDPOINTS: {
+    HEALTH: "/",
+    DETECT: "/detect",
+    OCR: "/ocr",
+    QNA: "/qna",
+    PROCESS: "/process",
+    INTENT: "/intent",
+  },
+  TIMEOUT: 30000, // 30 seconds (extra time for tunnel + AI processing)
+};
 
-  async processQuery(imageUri, question) {
-    const formData = new FormData();
-    formData.append("image", { uri: imageUri, type: "image/jpeg", name: "capture.jpg" });
-    formData.append("question", question);
-
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), this.timeout);
-
-    const res = await fetch(`${this.baseUrl}${API_CONFIG.ENDPOINTS.PROCESS}`, {
-      method: "POST",
-      body: formData,
-      signal: controller.signal,
-    });
-    clearTimeout(id);
-    if (!res.ok) throw new Error(`Server error: ${res.status}`);
-    return await res.json();
-  }
-
-  async detectObjects(imageUri) {
-    const formData = new FormData();
-    formData.append("image", { uri: imageUri, type: "image/jpeg", name: "capture.jpg" });
-    const res = await fetch(`${this.baseUrl}${API_CONFIG.ENDPOINTS.DETECT}`, {
-      method: "POST",
-      body: formData,
-    });
-    return await res.json();
-  }
-
-  async extractText(imageUri) {
-    const formData = new FormData();
-    formData.append("image", { uri: imageUri, type: "image/jpeg", name: "capture.jpg" });
-    const res = await fetch(`${this.baseUrl}${API_CONFIG.ENDPOINTS.OCR}`, {
-      method: "POST",
-      body: formData,
-    });
-    return await res.json();
-  }
-
-  async getAnswer(question, context) {
-    const formData = new FormData();
-    formData.append("question", question);
-    formData.append("context", context);
-    const res = await fetch(`${this.baseUrl}${API_CONFIG.ENDPOINTS.QNA}`, {
-      method: "POST",
-      body: formData,
-    });
-    return await res.json();
-  }
-}
-
-export default new NavAIService();
+export default API_CONFIG;

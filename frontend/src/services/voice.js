@@ -5,14 +5,6 @@
  * (e.g., in Expo Go or web).
  */
 
-let Voice = null;
-try {
-  Voice = require("@react-native-voice/voice").default;
-} catch (e) {
-  // Native module unavailable (Expo Go / web) — demo mode will be used
-  console.log("Native Voice module unavailable, using demo mode");
-}
-
 // Demo questions used when native STT is unavailable
 const DEMO_QUESTIONS = [
   "What is in front of me?",
@@ -30,48 +22,63 @@ const DEMO_QUESTIONS = [
 class VoiceService {
   constructor() {
     this.isListening = false;
-    this.isAvailable = !!Voice;
+    this.isAvailable = false;
+    this.Voice = null;
     this.onResultCallback = null;
     this.onErrorCallback = null;
     this.onStartCallback = null;
     this.onEndCallback = null;
 
-    if (this.isAvailable) {
-      this._setupListeners();
+    this._initVoice();
+  }
+
+  _initVoice() {
+    try {
+      const mod = require("@react-native-voice/voice");
+      const V = mod?.default || mod;
+      if (V && typeof V.start === "function" && typeof V.onSpeechStart !== "undefined") {
+        this.Voice = V;
+        this.isAvailable = true;
+        this._setupListeners();
+      }
+    } catch (e) {
+      // Native module not available
+    }
+    if (!this.isAvailable) {
+      console.log("Voice: using demo mode (native STT unavailable)");
     }
   }
 
-  /**
-   * Set up native voice recognition event listeners.
-   */
   _setupListeners() {
-    Voice.onSpeechStart = () => {
-      this.isListening = true;
-      if (this.onStartCallback) this.onStartCallback();
-    };
+    try {
+      this.Voice.onSpeechStart = () => {
+        this.isListening = true;
+        if (this.onStartCallback) this.onStartCallback();
+      };
 
-    Voice.onSpeechEnd = () => {
-      this.isListening = false;
-      if (this.onEndCallback) this.onEndCallback();
-    };
+      this.Voice.onSpeechEnd = () => {
+        this.isListening = false;
+        if (this.onEndCallback) this.onEndCallback();
+      };
 
-    Voice.onSpeechResults = (event) => {
-      const results = event?.value || [];
-      if (results.length > 0 && this.onResultCallback) {
-        this.onResultCallback(results[0]); // Best result
-      }
-    };
+      this.Voice.onSpeechResults = (event) => {
+        const results = event?.value || [];
+        if (results.length > 0 && this.onResultCallback) {
+          this.onResultCallback(results[0]);
+        }
+      };
 
-    Voice.onSpeechError = (event) => {
-      this.isListening = false;
-      console.error("Voice error:", event?.error);
-      if (this.onErrorCallback) this.onErrorCallback(event?.error);
-    };
+      this.Voice.onSpeechError = (event) => {
+        this.isListening = false;
+        console.error("Voice error:", event?.error);
+        if (this.onErrorCallback) this.onErrorCallback(event?.error);
+      };
+    } catch (e) {
+      this.isAvailable = false;
+      this.Voice = null;
+    }
   }
 
-  /**
-   * Register event callbacks.
-   */
   onResult(callback) {
     this.onResultCallback = callback;
     return this;
@@ -92,17 +99,15 @@ class VoiceService {
     return this;
   }
 
-  /**
-   * Start listening for speech.
-   * Uses native STT if available; falls back to demo mode.
-   */
   async start(language = "en-US") {
-    if (this.isAvailable) {
+    if (this.isAvailable && this.Voice) {
       try {
-        await Voice.start(language);
+        await this.Voice.start(language);
         this.isListening = true;
       } catch (e) {
-        console.error("Failed to start voice:", e);
+        console.log("Voice native failed, switching to demo mode");
+        this.isAvailable = false;
+        this.Voice = null;
         this._fallbackDemo();
       }
     } else {
@@ -110,43 +115,34 @@ class VoiceService {
     }
   }
 
-  /**
-   * Stop listening.
-   */
   async stop() {
-    if (this.isAvailable && this.isListening) {
+    if (this.isAvailable && this.Voice && this.isListening) {
       try {
-        await Voice.stop();
+        await this.Voice.stop();
       } catch (e) {
-        console.error("Failed to stop voice:", e);
+        // ignore
       }
     }
     this.isListening = false;
   }
 
-  /**
-   * Cancel listening without processing.
-   */
   async cancel() {
-    if (this.isAvailable) {
+    if (this.isAvailable && this.Voice) {
       try {
-        await Voice.cancel();
+        await this.Voice.cancel();
       } catch (e) {
-        console.error("Failed to cancel voice:", e);
+        // ignore
       }
     }
     this.isListening = false;
   }
 
-  /**
-   * Cleanup listeners on unmount.
-   */
   async destroy() {
-    if (this.isAvailable) {
+    if (this.isAvailable && this.Voice) {
       try {
-        await Voice.destroy();
+        await this.Voice.destroy();
       } catch (e) {
-        // Ignore cleanup errors
+        // ignore
       }
     }
     this.onResultCallback = null;
@@ -155,15 +151,10 @@ class VoiceService {
     this.onEndCallback = null;
   }
 
-  /**
-   * Simulate voice recognition with a random demo question.
-   * Used in Expo Go or when native STT is unavailable.
-   */
   _fallbackDemo() {
     this.isListening = true;
     if (this.onStartCallback) this.onStartCallback();
 
-    // Simulate listening delay
     setTimeout(() => {
       const randomQ =
         DEMO_QUESTIONS[Math.floor(Math.random() * DEMO_QUESTIONS.length)];
